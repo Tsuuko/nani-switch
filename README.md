@@ -83,7 +83,7 @@ git push origin v0.1.0
 
 GitHub ActionsがWindows x64版をビルドし、インストーラー、ポータブルEXE、ZIP、SHA-256チェックサムをDraft Releaseへアップロードします。内容を確認してからGitHub上で公開してください。
 
-既存タグのリリースを手動で作成・再試行する場合は、GitHubの `Actions` → `Release` → `Run workflow` を開き、`v0.1.0`形式のタグを入力します。同じタグで再実行すると、Draft Releaseの生成物を上書きします。
+既存タグのリリースを手動で作成・再試行する場合は、GitHubの `Actions` → `Release` → `Run workflow` を開き、`Use workflow from` で対象タグを選択します。ブランチを選択した場合は、`Cargo.toml` のバージョンに対応する既存タグを使用します。同じタグで再実行すると、Draft Releaseの生成物を上書きします。
 
 ## ライセンス
 

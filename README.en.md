@@ -83,7 +83,7 @@ git push origin v0.1.0
 
 GitHub Actions builds the Windows x64 release and uploads the installer, portable EXE, ZIP, and SHA-256 checksums to a draft GitHub Release. Review and publish the draft on GitHub when it is ready.
 
-To manually create or retry a release for an existing tag, open `Actions` → `Release` → `Run workflow` on GitHub and enter a tag such as `v0.1.0`. Running it again for the same tag replaces the assets in the draft release.
+To manually create or retry a release for an existing tag, open `Actions` → `Release` → `Run workflow` on GitHub and select the tag under `Use workflow from`. If you select a branch, the workflow uses the existing tag matching the version in `Cargo.toml`. Running it again for the same tag replaces the assets in the draft release.
 
 ## License
 

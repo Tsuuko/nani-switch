@@ -5,11 +5,6 @@ on:
     tags:
       - "v*"
   workflow_dispatch:
-    inputs:
-      tag:
-        description: Existing release tag (for example, v0.1.0)
-        required: true
-        type: string
 
 permissions:
   contents: write
@@ -22,7 +17,7 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v6
         with:
-          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
+          fetch-depth: 0
 
       - name: Install Rust stable
         shell: pwsh
@@ -31,19 +26,42 @@ jobs:
           rustup default stable
           rustup target add x86_64-pc-windows-msvc
 
-      - name: Validate release tag
+      - name: Resolve and validate release tag
         shell: pwsh
         env:
-          RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+          SELECTED_REF_NAME: ${{ github.ref_name }}
+          SELECTED_REF_TYPE: ${{ github.ref_type }}
         run: |
-          if ($env:RELEASE_TAG -notmatch '^v[0-9]+\.[0-9]+\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?$') {
+          if ($env:SELECTED_REF_TYPE -eq "tag") {
+            $releaseTag = $env:SELECTED_REF_NAME
+          } elseif ($env:SELECTED_REF_TYPE -eq "branch") {
+            $metadata = cargo metadata --locked --no-deps --format-version 1 | ConvertFrom-Json
+            $releaseTag = "v$($metadata.packages[0].version)"
+          } else {
+            throw "The selected ref must be a branch or tag."
+          }
+
+          if ($releaseTag -notmatch '^v[0-9]+\.[0-9]+\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?$') {
             throw "Release tag must use semantic versioning, for example v0.1.0."
           }
+
+          git rev-parse --verify "refs/tags/$releaseTag" *> $null
+          if ($LASTEXITCODE -ne 0) {
+            throw "Release tag $releaseTag does not exist."
+          }
+
+          git checkout --detach "refs/tags/$releaseTag"
+          if ($LASTEXITCODE -ne 0) {
+            throw "Failed to check out release tag $releaseTag."
+          }
+
           $metadata = cargo metadata --locked --no-deps --format-version 1 | ConvertFrom-Json
           $packageVersion = $metadata.packages[0].version
-          if ($env:RELEASE_TAG -ne "v$packageVersion") {
-            throw "Tag $env:RELEASE_TAG does not match Cargo.toml version $packageVersion."
+          if ($releaseTag -ne "v$packageVersion") {
+            throw "Tag $releaseTag does not match Cargo.toml version $packageVersion."
           }
+
+          "RELEASE_TAG=$releaseTag" >> $env:GITHUB_ENV
 
       - name: Run tests
         run: cargo test --locked
@@ -53,8 +71,6 @@ jobs:
 
       - name: Package release assets
         shell: pwsh
-        env:
-          RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
         run: |
           $baseName = "nani-switch-$env:RELEASE_TAG-windows-x86_64"
           $artifacts = Join-Path $PWD "artifacts"
@@ -79,8 +95,6 @@ jobs:
 
       - name: Build installer
         shell: pwsh
-        env:
-          RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
         run: |
           $version = $env:RELEASE_TAG.Substring(1)
           $numericVersion = ($version -split '[-+]')[0]
@@ -110,7 +124,6 @@ jobs:
         shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
         run: |
           $baseName = "nani-switch-$env:RELEASE_TAG-windows-x86_64"
           $assets = @(
