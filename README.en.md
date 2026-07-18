@@ -4,6 +4,9 @@ English | [日本語](README.md)
 
 Nani Switch is a lightweight, unofficial Windows tray utility for switching between multiple Nani accounts. It is written in Rust and does not require Electron or Node.js.
 
+> [!TIP]
+> If you need a higher usage limit, you can subscribe to the [Nani Team Plan](https://nani.now/en/team) as an individual with multiple seats. Since the team's usage limit increases with the number of seats, there is no need to switch between multiple accounts solely to increase your available usage.
+
 > [!CAUTION]
 > This project is a proof of concept (PoC) intended exclusively for research and educational purposes. Do not use it for real account operations or everyday use.
 
