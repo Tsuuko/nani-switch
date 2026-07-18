@@ -1,0 +1,136 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing release tag (for example, v0.1.0)
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
+
+      - name: Install Rust stable
+        shell: pwsh
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+          rustup target add x86_64-pc-windows-msvc
+
+      - name: Validate release tag
+        shell: pwsh
+        env:
+          RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+        run: |
+          if ($env:RELEASE_TAG -notmatch '^v[0-9]+\.[0-9]+\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?$') {
+            throw "Release tag must use semantic versioning, for example v0.1.0."
+          }
+          $metadata = cargo metadata --locked --no-deps --format-version 1 | ConvertFrom-Json
+          $packageVersion = $metadata.packages[0].version
+          if ($env:RELEASE_TAG -ne "v$packageVersion") {
+            throw "Tag $env:RELEASE_TAG does not match Cargo.toml version $packageVersion."
+          }
+
+      - name: Run tests
+        run: cargo test --locked
+
+      - name: Build release binary
+        run: cargo build --locked --release --target x86_64-pc-windows-msvc
+
+      - name: Package release assets
+        shell: pwsh
+        env:
+          RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+        run: |
+          $baseName = "nani-switch-$env:RELEASE_TAG-windows-x86_64"
+          $artifacts = Join-Path $PWD "artifacts"
+          $staging = Join-Path $artifacts $baseName
+          New-Item -ItemType Directory -Force $staging | Out-Null
+
+          $builtExe = Join-Path $PWD "target\x86_64-pc-windows-msvc\release\nani-switch.exe"
+          $releaseExe = Join-Path $artifacts "$baseName.exe"
+          Copy-Item $builtExe $releaseExe
+          Copy-Item $builtExe (Join-Path $staging "nani-switch.exe")
+          Copy-Item "LICENSE" $staging
+          Copy-Item "README.md" $staging
+          Copy-Item "README.en.md" $staging
+          Copy-Item "CHANGELOG.md" $staging
+
+          $zipPath = Join-Path $artifacts "$baseName.zip"
+          Compress-Archive -Path "$staging\*" -DestinationPath $zipPath
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: choco install innosetup --yes --no-progress
+
+      - name: Build installer
+        shell: pwsh
+        env:
+          RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+        run: |
+          $version = $env:RELEASE_TAG.Substring(1)
+          $numericVersion = ($version -split '[-+]')[0]
+          $compiler = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $compiler)) {
+            throw "Inno Setup compiler was not found at $compiler."
+          }
+          & $compiler "/DMyAppVersion=$version" "/DMyAppNumericVersion=$numericVersion" "installer\nani-switch.iss"
+          if ($LASTEXITCODE -ne 0) {
+            throw "Inno Setup failed with exit code $LASTEXITCODE."
+          }
+
+      - name: Generate checksums
+        shell: pwsh
+        run: |
+          $artifacts = Join-Path $PWD "artifacts"
+          $checksumPath = Join-Path $artifacts "SHA256SUMS.txt"
+          Get-ChildItem $artifacts -File |
+            Where-Object Name -ne "SHA256SUMS.txt" |
+            Sort-Object Name |
+            ForEach-Object {
+            $hash = (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+            "$hash  $($_.Name)"
+          } | Set-Content $checksumPath -Encoding utf8
+
+      - name: Create GitHub Release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+        run: |
+          $baseName = "nani-switch-$env:RELEASE_TAG-windows-x86_64"
+          $assets = @(
+            "artifacts\$baseName.exe"
+            "artifacts\$baseName.zip"
+            "artifacts\$baseName-setup.exe"
+            "artifacts\SHA256SUMS.txt"
+          )
+
+          gh release view $env:RELEASE_TAG *> $null
+          if ($LASTEXITCODE -eq 0) {
+            gh release upload $env:RELEASE_TAG $assets --clobber
+          } else {
+            gh release create $env:RELEASE_TAG $assets `
+              --verify-tag `
+              --draft `
+              --generate-notes `
+              --title $env:RELEASE_TAG
+          }
+
+          if ($LASTEXITCODE -ne 0) {
+            throw "GitHub Release creation or upload failed."
+          }

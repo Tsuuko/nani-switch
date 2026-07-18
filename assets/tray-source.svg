@@ -1,0 +1,10 @@
+<!-- Uses the Lucide arrow-left-right icon (ISC), adapted for the tray mark. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <rect x="8" y="8" width="240" height="240" rx="56" fill="#58b8f8" stroke="#f4fbff" stroke-width="8"/>
+  <g transform="translate(40 40) scale(7.333333)" fill="none" stroke="#ffffff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M8 3 4 7l4 4"/>
+    <path d="M4 7h16"/>
+    <path d="m16 21 4-4-4-4"/>
+    <path d="M20 17H4"/>
+  </g>
+</svg>
