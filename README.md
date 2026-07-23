@@ -2,7 +2,11 @@
 
 [English](README.en.md) | 日本語
 
-Naniの複数アカウントをWindowsのタスクトレイから切り替える、軽量な非公式ツールです。Rustで実装されており、ElectronやNode.jsは必要ありません。
+![Banner](docs/assets/banner.png)
+
+## なにこれ？
+
+Naniの複数アカウントをWindowsのタスクトレイから切り替える、軽量な非公式ツールです。
 
 > [!TIP]
 > より多くの利用枠が必要な場合、[Naniのチームプラン](https://nani.now/ja/team)は個人でも複数席を契約できます。チーム全体の利用上限は席数に応じて増えるため、利用枠を増やす目的で複数のアカウントを使い分ける必要はありません。

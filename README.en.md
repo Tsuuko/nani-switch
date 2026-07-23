@@ -2,7 +2,11 @@
 
 English | [日本語](README.md)
 
-Nani Switch is a lightweight, unofficial Windows tray utility for switching between multiple Nani accounts. It is written in Rust and does not require Electron or Node.js.
+![Banner](docs/assets/banner.en.png)
+
+## What's this?
+
+Nani Switch is a lightweight, unofficial Windows tray utility for switching between multiple Nani accounts.
 
 > [!TIP]
 > If you need a higher usage limit, you can subscribe to the [Nani Team Plan](https://nani.now/en/team) as an individual with multiple seats. Since the team's usage limit increases with the number of seats, there is no need to switch between multiple accounts solely to increase your available usage.
@@ -47,10 +51,10 @@ Switching force-closes Nani, updates its authentication data, and restarts it wi
 
 Data is stored in `%USERPROFILE%\.nani-switch`.
 
-| File | Contents |
-| --- | --- |
-| `accounts.json` | Saved accounts and authentication data |
-| `settings.json` | Application settings |
+| File              | Contents                                 |
+| ----------------- | ---------------------------------------- |
+| `accounts.json`   | Saved accounts and authentication data   |
+| `settings.json`   | Application settings                     |
 | `nani-switch.log` | Application log; tokens are never logged |
 
 > [!IMPORTANT]
